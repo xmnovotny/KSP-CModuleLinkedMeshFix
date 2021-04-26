@@ -8,5 +8,5 @@ This is a plugin for [Kerbal Space Program] that fixes saving and loading strut 
 For more information, please visit the [Forum Development Thread].
 
 [Kerbal Space Program]: http://www.kerbalspaceprogram.com
-[Forum Development Thread]: http://forum.kerbalspaceprogram.com/threads/81821
+[Forum Development Thread]: http://forum.kerbalspaceprogram.com
 
