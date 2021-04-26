@@ -1,19 +1,30 @@
 /*
  * Fix for struts and fuel lines connected in the EVA construction mode
- * https://github.com/xmnovotny/
+ * https://github.com/xmnovotny/KSP-CModuleLinkedMeshFix
  * License: GPL v2.
  * 
  */
 
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 namespace CModuleLinkedMeshFix
 {
 	[KSPAddon(KSPAddon.Startup.PSystemSpawn, false)]
 	public class CModuleLinkedMeshFix : MonoBehaviour
 	{
-        enum LogLevel {WARNING, INFO, DEBUG};
+        public enum LogLevel {
+            WARNING = 0,
+            INFO = 1,
+            DEBUG = 2
+        };
+
+#if DEBUG
+        public static LogLevel logLevel = LogLevel.DEBUG;
+#else
+        public static LogLevel logLevel = LogLevel.WARNING;
+#endif
         const uint DUPLICATE_CRAFTID = uint.MinValue;
 
         private class CraftMissionDictionary: Dictionary<uint, uint>
@@ -55,12 +66,32 @@ namespace CModuleLinkedMeshFix
 
         public void Start()
         {
-            //GameEvents.onGameStatePostLoad.Add(GamePostLoad);
+            PSystemManager.Instance.OnPSystemReady.Add(PSystemReady);
             GameEvents.OnFlightGlobalsReady.Add(FlightGlobalsReady);
             GameEvents.OnFlightCompoundPartLinked.Add(PartLinked);
         }
 
-//        private void GamePostLoad(ConfigNode node)
+        private void PSystemReady()
+        {
+            ConfigNode[] cfgNodes = GameDatabase.Instance.GetConfigNodes("CMODULELINKEDMESHFIX");
+            Log("Loading CModuleLinkedMeshFix configuration, cfgNodes: " + cfgNodes.Length, LogLevel.DEBUG);
+
+            if (cfgNodes.Length>0)
+            {
+                try
+                {
+                    if (cfgNodes[0].HasValue("logLevel"))
+                    {
+                        logLevel = (LogLevel)Enum.Parse(typeof(LogLevel), cfgNodes[0].GetValue("logLevel"), true);
+                        Log("Loaded CModuleLinkedMeshFix configuration", LogLevel.DEBUG);
+                    } 
+                } catch (Exception e)
+                {
+                    Log("Error loading CModuleLinkedMeshFix configuration: " + e.Message, LogLevel.WARNING);
+                }
+            }
+        }
+
         private void FlightGlobalsReady(bool ready)
         {
             if (ready)
@@ -79,7 +110,7 @@ namespace CModuleLinkedMeshFix
                         {
                             if (p.FindModule("CModuleLinkedMesh") != null)
                             {
-                                Log("Unloaded CModuleLinkedMesh: " + p.partName);
+                                Log("CModuleLinkedMesh: " + p.partName);
                                 ConfigNode cn = p.partData;
                                 Log(cn.ToString());
                                 partsToCheck.Add(p);
@@ -87,7 +118,7 @@ namespace CModuleLinkedMeshFix
                             else
                             {
                                 craftMissionDict.AddCraftID(p.craftID, p.missionID);
-                                Log("Unloaded another part: " + p.partName);
+                                Log("Another part: " + p.partName);
                             }
                         }
 
@@ -148,19 +179,21 @@ namespace CModuleLinkedMeshFix
 
         private void Log(object msg, LogLevel level = LogLevel.DEBUG)
         {
-            const string LogPrefix = "[CModuleLinkedMeshFix] ";
-            switch (level) {
-                case LogLevel.DEBUG:
-#if DEBUG
-                    Debug.Log(LogPrefix + msg);
-#endif
-                    break;
-                case LogLevel.INFO:
-                    Debug.Log(LogPrefix + msg);
-                    break;
-                case LogLevel.WARNING:
-                    Debug.LogWarning(LogPrefix + msg);
-                    break;
+            if (level <= logLevel)
+            {
+                const string LogPrefix = "[CModuleLinkedMeshFix] ";
+                switch (level)
+                {
+                    case LogLevel.DEBUG:
+                        Debug.Log(LogPrefix + msg);
+                        break;
+                    case LogLevel.INFO:
+                        Debug.Log(LogPrefix + msg);
+                        break;
+                    case LogLevel.WARNING:
+                        Debug.LogWarning(LogPrefix + msg);
+                        break;
+                }
             }
         }
     }
